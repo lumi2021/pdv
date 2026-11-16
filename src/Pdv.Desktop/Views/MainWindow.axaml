@@ -1,0 +1,77 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Pdv.Desktop.ViewModels"
+        xmlns:views="using:Pdv.Desktop.Views"
+        x:Class="Pdv.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="PDV Lanchonete"
+        Width="1100" Height="700"
+        MinWidth="800" MinHeight="500"
+        WindowStartupLocation="CenterScreen">
+
+  <Grid>
+
+    <!-- Iniciando -->
+    <StackPanel IsVisible="{Binding Iniciando}"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
+      <ProgressBar IsIndeterminate="True" Width="280" />
+      <TextBlock Text="Preparando o sistema..." FontSize="20" HorizontalAlignment="Center" />
+    </StackPanel>
+
+    <!-- Erro -->
+    <StackPanel IsVisible="{Binding ComErro}"
+                HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="560">
+      <TextBlock Text="Algo deu errado ao iniciar" FontSize="24" FontWeight="SemiBold" />
+      <TextBlock Text="{Binding MensagemErro}" TextWrapping="Wrap" FontSize="16" />
+      <Button Content="Tentar novamente" Command="{Binding TentarNovamenteCommand}" />
+      <Expander Header="Detalhes técnicos">
+        <TextBox Text="{Binding DetalhesErro}" IsReadOnly="True" TextWrapping="Wrap"
+                 MaxHeight="220" FontSize="12" />
+      </Expander>
+    </StackPanel>
+
+    <!-- Pronto -->
+    <Grid IsVisible="{Binding Pronto}" ColumnDefinitions="230,*">
+
+      <Border Grid.Column="0" Background="#1F2937">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="PDV Lanchonete"
+                     Foreground="White" FontSize="18" FontWeight="SemiBold"
+                     Margin="20,24,20,16" />
+          <ListBox ItemsSource="{Binding Secoes}"
+                   SelectedItem="{Binding SecaoAtual}"
+                   Background="Transparent">
+            <ListBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:SecaoViewModel">
+                <StackPanel Orientation="Horizontal" Spacing="12" Margin="4,8">
+                  <TextBlock Text="{Binding Icone}" FontSize="20" VerticalAlignment="Center" />
+                  <TextBlock Text="{Binding Titulo}" FontSize="16"
+                             Foreground="White" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </DockPanel>
+      </Border>
+
+      <ContentControl Grid.Column="1" Content="{Binding SecaoAtual}" Margin="32">
+        <ContentControl.DataTemplates>
+          <!-- Telas prontas: devem vir antes do modelo genérico de "em construção". -->
+          <DataTemplate DataType="vm:EstoqueViewModel">
+            <views:EstoqueView />
+          </DataTemplate>
+
+          <DataTemplate DataType="vm:SecaoViewModel" x:DataType="vm:SecaoViewModel">
+            <StackPanel Spacing="8" VerticalAlignment="Top">
+              <TextBlock Text="{Binding Titulo}" FontSize="28" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding Descricao}" FontSize="16" Opacity="0.7" />
+              <TextBlock Text="{Binding Aviso}" FontSize="14" Margin="0,24,0,0" Opacity="0.6" />
+            </StackPanel>
+          </DataTemplate>
+        </ContentControl.DataTemplates>
+      </ContentControl>
+
+    </Grid>
+
+  </Grid>
+</Window>

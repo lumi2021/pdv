@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Pdv.Desktop.ViewModels"
+             x:Class="Pdv.Desktop.Views.EstoqueView"
+             x:DataType="vm:EstoqueViewModel">
+
+  <Grid ColumnDefinitions="*,24,360" RowDefinitions="Auto,Auto,*">
+
+    <!-- Cabeçalho -->
+    <DockPanel Grid.Row="0" Grid.ColumnSpan="3">
+      <Button DockPanel.Dock="Right" Classes="accent" Content="+ Novo ingrediente"
+              Command="{Binding NovoCommand}" VerticalAlignment="Center" />
+      <StackPanel>
+        <TextBlock Text="Estoque" FontSize="28" FontWeight="SemiBold" />
+        <TextBlock Text="Ingredientes e quanto temos de cada um" FontSize="16" Opacity="0.7" />
+      </StackPanel>
+    </DockPanel>
+
+    <!-- Alerta de estoque baixo -->
+    <Border Grid.Row="1" Grid.ColumnSpan="3" IsVisible="{Binding TemAlerta}"
+            Background="#FEF3C7" CornerRadius="6" Padding="12,8" Margin="0,16,0,0">
+      <TextBlock Text="{Binding AlertaEstoqueBaixo}" Foreground="#92400E" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- Lista -->
+    <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,16,0,0">
+      <CheckBox DockPanel.Dock="Bottom" Content="Mostrar desativados"
+                IsChecked="{Binding MostrarDesativados}" Margin="0,8,0,0" />
+      <ListBox ItemsSource="{Binding Ingredientes}" SelectedItem="{Binding Selecionado}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:IngredienteItemViewModel">
+            <Grid ColumnDefinitions="*,Auto" Margin="4,6">
+              <StackPanel>
+                <TextBlock Text="{Binding Nome}" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding MinimoTexto}" FontSize="12" Opacity="0.6" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding SaldoTexto}" FontSize="16" HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding Situacao}" FontSize="12" Foreground="#B91C1C"
+                           HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <!-- Formulário -->
+    <ScrollViewer Grid.Row="2" Grid.Column="2" Margin="0,16,0,0"
+                  IsVisible="{Binding FormularioVisivel}">
+      <StackPanel Spacing="14">
+
+        <TextBlock Text="{Binding TituloFormulario}" FontSize="20" FontWeight="SemiBold" />
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Nome" FontSize="13" Opacity="0.7" />
+          <TextBox Text="{Binding Nome}" Watermark="Ex.: Pão de hambúrguer" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Medido em" FontSize="13" Opacity="0.7" />
+          <ComboBox ItemsSource="{Binding Unidades}" SelectedItem="{Binding UnidadeSelecionada}"
+                    IsEnabled="{Binding EmCriacao}" HorizontalAlignment="Stretch">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:OpcaoUnidade">
+                <TextBlock Text="{Binding Nome}" />
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Avisar quando chegar em (estoque mínimo)" FontSize="13" Opacity="0.7" />
+          <NumericUpDown Value="{Binding EstoqueMinimo}" Minimum="0" Increment="1" FormatString="0.##" />
+        </StackPanel>
+
+        <StackPanel Spacing="4" IsVisible="{Binding EmCriacao}">
+          <TextBlock Text="Quanto temos agora" FontSize="13" Opacity="0.7" />
+          <NumericUpDown Value="{Binding SaldoInicial}" Minimum="0" Increment="1" FormatString="0.##" />
+        </StackPanel>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="accent" Content="{Binding TextoBotaoSalvar}" Command="{Binding SalvarCommand}" />
+          <Button Content="Cancelar" Command="{Binding CancelarCommand}" />
+        </StackPanel>
+
+        <!-- Mensagens -->
+        <TextBlock Text="{Binding Erro}" IsVisible="{Binding TemErro}"
+                   Foreground="#B91C1C" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Sucesso}" IsVisible="{Binding TemSucesso}"
+                   Foreground="#047857" TextWrapping="Wrap" />
+
+        <!-- Entrada e contagem (só ao editar um ingrediente ativo) -->
+        <StackPanel Spacing="14" IsVisible="{Binding PodeMovimentar}">
+
+          <Border Background="#F3F4F6" CornerRadius="8" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Chegou mercadoria?" FontWeight="SemiBold" />
+              <NumericUpDown Value="{Binding QuantidadeEntrada}" Minimum="0" Increment="1"
+                             FormatString="0.##" Watermark="Quantidade que entrou" />
+              <TextBox Text="{Binding ObservacaoEntrada}" Watermark="Observação (ex.: compra do mercado)" />
+              <Button Content="Registrar entrada" Command="{Binding RegistrarEntradaCommand}" />
+            </StackPanel>
+          </Border>
+
+          <Border Background="#F3F4F6" CornerRadius="8" Padding="12">
+            <StackPanel Spacing="8">
+              <TextBlock Text="Contou e o número não bate?" FontWeight="SemiBold" />
+              <NumericUpDown Value="{Binding SaldoContado}" Minimum="0" Increment="1"
+                             FormatString="0.##" Watermark="Quantidade contada" />
+              <Button Content="Corrigir saldo" Command="{Binding AjustarSaldoCommand}" />
+            </StackPanel>
+          </Border>
+
+          <Button Content="Desativar ingrediente" Command="{Binding DesativarCommand}" />
+        </StackPanel>
+
+        <Button Content="Reativar ingrediente" Command="{Binding ReativarCommand}"
+                IsVisible="{Binding PodeReativar}" />
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </Grid>
+</UserControl>
