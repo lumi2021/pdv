@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Pdv.Data;
 using Pdv.Desktop.ViewModels;
+using Pdv.Server;
 using Pdv.Desktop.Views;
 
 namespace Pdv.Desktop;
@@ -28,7 +29,8 @@ public partial class App : Application
 
             var mainViewModel = _services.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = mainViewModel };
-            desktop.Exit += (_, _) => _services.Dispose();
+            // O servidor web só implementa DisposeAsync; roda fora da thread da interface para não travar o fechamento.
+            desktop.Exit += (_, _) => Task.Run(() => _services!.DisposeAsync().AsTask()).GetAwaiter().GetResult();
 
             // Prepara o banco em segundo plano enquanto a janela já mostra "Preparando o sistema...".
             // IniciarAsync trata os próprios erros e nunca lança.
@@ -44,5 +46,9 @@ public partial class App : Application
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<EstoqueViewModel>();
         services.AddSingleton<CardapioViewModel>();
+
+        // Servidor web do PDV móvel: usa os mesmos serviços de domínio do app.
+        services.AddSingleton(provider => new ServidorWeb(provider));
+        services.AddSingleton<CelularViewModel>();
     }
 }

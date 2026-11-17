@@ -1,0 +1,44 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Pdv.Desktop.ViewModels"
+             x:Class="Pdv.Desktop.Views.CelularView"
+             x:DataType="vm:CelularViewModel">
+
+  <StackPanel Spacing="16" MaxWidth="640" HorizontalAlignment="Left">
+
+    <StackPanel>
+      <TextBlock Text="Celular do garçom" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="Conecte o celular a este computador pelo Wi-Fi" FontSize="16" Opacity="0.7" />
+    </StackPanel>
+
+    <!-- Servidor ligado -->
+    <Border IsVisible="{Binding Ativo}" Background="#ECFDF5" CornerRadius="8" Padding="16">
+      <StackPanel Spacing="8">
+        <TextBlock Text="Servidor ligado" FontWeight="SemiBold" Foreground="#047857" FontSize="16" />
+        <TextBlock TextWrapping="Wrap"
+                   Text="No celular, conectado ao mesmo Wi-Fi deste computador, abra o navegador e digite um destes endereços:" />
+        <ItemsControl ItemsSource="{Binding Enderecos}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="x:String">
+              <SelectableTextBlock Text="{Binding}" FontSize="22" FontWeight="SemiBold" Margin="0,4" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock TextWrapping="Wrap" FontSize="13" Opacity="0.7"
+                   Text="Se aparecer mais de um endereço, use o que começa com 192.168 ou 10. Se o celular não abrir a página, o Windows pode estar bloqueando: quando ele perguntar, permita o PDV Lanchonete em redes privadas." />
+      </StackPanel>
+    </Border>
+
+    <!-- Servidor com falha -->
+    <Border IsVisible="{Binding ComFalha}" Background="#FEE2E2" CornerRadius="8" Padding="16">
+      <StackPanel Spacing="8">
+        <TextBlock Text="O servidor do celular não ligou" FontWeight="SemiBold" Foreground="#991B1B" FontSize="16" />
+        <TextBlock TextWrapping="Wrap"
+                   Text="O resto do sistema funciona normalmente. Verifique se outro programa não está usando a rede e tente de novo." />
+        <TextBlock Text="{Binding DetalhesErro}" TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+        <Button Content="Tentar novamente" Command="{Binding TentarNovamenteCommand}" />
+      </StackPanel>
+    </Border>
+
+  </StackPanel>
+</UserControl>

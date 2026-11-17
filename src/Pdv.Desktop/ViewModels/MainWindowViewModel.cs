@@ -40,6 +40,10 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
             // Em segundo plano para a janela não congelar na primeira execução.
             await Task.Run(() => DatabaseInitializer.InitializeAsync(services));
 
+            // Só depois do banco pronto o servidor do celular pode atender pedidos.
+            // Falha aqui não impede o uso do app: a seção Celular mostra o problema.
+            await services.GetRequiredService<CelularViewModel>().IniciarServidorAsync();
+
             if (Secoes.Count == 0)
                 CriarSecoes();
 
@@ -71,6 +75,6 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
         Secoes.Add(services.GetRequiredService<EstoqueViewModel>());
         Secoes.Add(services.GetRequiredService<CardapioViewModel>());
         Secoes.Add(new SecaoViewModel("Notas", "📄", "Notas internas dos pedidos", passo: 10));
-        Secoes.Add(new SecaoViewModel("Celular", "📱", "Conectar o celular do garçom", passo: 8));
+        Secoes.Add(services.GetRequiredService<CelularViewModel>());
     }
 }
