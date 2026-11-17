@@ -69,7 +69,7 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
     {
         Secoes.Add(new SecaoViewModel("Pedidos", "🧾", "Fila de pedidos em tempo real", passo: 9));
         Secoes.Add(services.GetRequiredService<EstoqueViewModel>());
-        Secoes.Add(new SecaoViewModel("Cardápio", "🍔", "Produtos, preços e receitas", passo: 6));
+        Secoes.Add(services.GetRequiredService<CardapioViewModel>());
         Secoes.Add(new SecaoViewModel("Notas", "📄", "Notas internas dos pedidos", passo: 10));
         Secoes.Add(new SecaoViewModel("Celular", "📱", "Conectar o celular do garçom", passo: 8));
     }

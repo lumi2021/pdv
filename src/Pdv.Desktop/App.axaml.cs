@@ -43,5 +43,6 @@ public partial class App : Application
         services.AddPdvData();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<EstoqueViewModel>();
+        services.AddSingleton<CardapioViewModel>();
     }
 }

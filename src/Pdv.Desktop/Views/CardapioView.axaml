@@ -1,0 +1,126 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Pdv.Desktop.ViewModels"
+             x:Class="Pdv.Desktop.Views.CardapioView"
+             x:DataType="vm:CardapioViewModel">
+
+  <Grid ColumnDefinitions="*,24,440" RowDefinitions="Auto,Auto,*">
+
+    <!-- Cabeçalho -->
+    <DockPanel Grid.Row="0" Grid.ColumnSpan="3">
+      <Button DockPanel.Dock="Right" Classes="accent" Content="+ Novo produto"
+              Command="{Binding NovoCommand}" VerticalAlignment="Center" />
+      <StackPanel>
+        <TextBlock Text="Cardápio" FontSize="28" FontWeight="SemiBold" />
+        <TextBlock Text="O que vendemos, por quanto e do que é feito" FontSize="16" Opacity="0.7" />
+      </StackPanel>
+    </DockPanel>
+
+    <!-- Alerta de produtos esgotados -->
+    <Border Grid.Row="1" Grid.ColumnSpan="3" IsVisible="{Binding TemAlerta}"
+            Background="#FEE2E2" CornerRadius="6" Padding="12,8" Margin="0,16,0,0">
+      <TextBlock Text="{Binding AlertaEsgotados}" Foreground="#991B1B" TextWrapping="Wrap" />
+    </Border>
+
+    <!-- Lista -->
+    <DockPanel Grid.Row="2" Grid.Column="0" Margin="0,16,0,0">
+      <CheckBox DockPanel.Dock="Bottom" Content="Mostrar desativados"
+                IsChecked="{Binding MostrarDesativados}" Margin="0,8,0,0" />
+      <ListBox ItemsSource="{Binding Produtos}" SelectedItem="{Binding Selecionado}">
+        <ListBox.ItemTemplate>
+          <DataTemplate x:DataType="vm:ProdutoItemViewModel">
+            <Grid ColumnDefinitions="*,Auto" Margin="4,6">
+              <StackPanel>
+                <TextBlock Text="{Binding Nome}" FontSize="16" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding CategoriaTexto}" FontSize="12" Opacity="0.6" />
+              </StackPanel>
+              <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                <TextBlock Text="{Binding PrecoTexto}" FontSize="16" HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding DisponibilidadeTexto}" FontSize="12" Opacity="0.6"
+                           HorizontalAlignment="Right" />
+                <TextBlock Text="{Binding Situacao}" FontSize="12" Foreground="#B91C1C"
+                           HorizontalAlignment="Right" />
+              </StackPanel>
+            </Grid>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </DockPanel>
+
+    <!-- Formulário -->
+    <ScrollViewer Grid.Row="2" Grid.Column="2" Margin="0,16,0,0"
+                  IsVisible="{Binding FormularioVisivel}">
+      <StackPanel Spacing="14" Margin="0,0,12,0">
+
+        <TextBlock Text="{Binding TituloFormulario}" FontSize="20" FontWeight="SemiBold" />
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Nome" FontSize="13" Opacity="0.7" />
+          <TextBox Text="{Binding Nome}" Watermark="Ex.: X-Burger" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Categoria" FontSize="13" Opacity="0.7" />
+          <TextBox Text="{Binding Categoria}" Watermark="Ex.: Lanches, Bebidas, Porções" />
+        </StackPanel>
+
+        <StackPanel Spacing="4">
+          <TextBlock Text="Preço (R$)" FontSize="13" Opacity="0.7" />
+          <NumericUpDown Value="{Binding Preco}" Minimum="0" Increment="0.5" FormatString="0.00" />
+        </StackPanel>
+
+        <!-- Receita -->
+        <Border Background="#F3F4F6" CornerRadius="8" Padding="12">
+          <StackPanel Spacing="8">
+            <TextBlock Text="Receita" FontWeight="SemiBold" />
+            <TextBlock Text="O que sai do estoque a cada unidade vendida. Bebidas prontas e outros itens sem receita ficam sem controle de estoque."
+                       FontSize="12" Opacity="0.7" TextWrapping="Wrap" />
+
+            <ItemsControl ItemsSource="{Binding Receita}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ReceitaLinhaViewModel">
+                  <Grid ColumnDefinitions="*,110,34,Auto" Margin="0,0,0,6">
+                    <ComboBox Grid.Column="0" ItemsSource="{Binding Opcoes}"
+                              SelectedItem="{Binding Ingrediente}"
+                              PlaceholderText="Ingrediente" HorizontalAlignment="Stretch">
+                      <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:IngredienteOpcao">
+                          <TextBlock Text="{Binding Texto}" />
+                        </DataTemplate>
+                      </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <NumericUpDown Grid.Column="1" Value="{Binding Quantidade}" Minimum="0"
+                                   Increment="1" FormatString="0.##" Margin="6,0,0,0" />
+                    <TextBlock Grid.Column="2" Text="{Binding UnidadeTexto}"
+                               VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <Button Grid.Column="3" Content="✕" Command="{Binding RemoverCommand}" />
+                  </Grid>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <Button Content="+ Adicionar ingrediente" Command="{Binding AdicionarIngredienteCommand}" />
+          </StackPanel>
+        </Border>
+
+        <StackPanel Orientation="Horizontal" Spacing="8">
+          <Button Classes="accent" Content="{Binding TextoBotaoSalvar}" Command="{Binding SalvarCommand}" />
+          <Button Content="Cancelar" Command="{Binding CancelarCommand}" />
+        </StackPanel>
+
+        <!-- Mensagens -->
+        <TextBlock Text="{Binding Erro}" IsVisible="{Binding TemErro}"
+                   Foreground="#B91C1C" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Sucesso}" IsVisible="{Binding TemSucesso}"
+                   Foreground="#047857" TextWrapping="Wrap" />
+
+        <Button Content="Tirar do cardápio" Command="{Binding DesativarCommand}"
+                IsVisible="{Binding PodeDesativar}" />
+        <Button Content="Voltar ao cardápio" Command="{Binding ReativarCommand}"
+                IsVisible="{Binding PodeReativar}" />
+
+      </StackPanel>
+    </ScrollViewer>
+
+  </Grid>
+</UserControl>

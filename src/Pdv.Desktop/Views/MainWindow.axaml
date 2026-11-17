@@ -61,6 +61,10 @@
             <views:EstoqueView />
           </DataTemplate>
 
+          <DataTemplate DataType="vm:CardapioViewModel">
+            <views:CardapioView />
+          </DataTemplate>
+
           <DataTemplate DataType="vm:SecaoViewModel" x:DataType="vm:SecaoViewModel">
             <StackPanel Spacing="8" VerticalAlignment="Top">
               <TextBlock Text="{Binding Titulo}" FontSize="28" FontWeight="SemiBold" />
