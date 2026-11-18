@@ -122,6 +122,8 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
         // O servidor usa as mesmas instâncias de serviço do app.
         builder.Services.AddSingleton(servicosDoApp.GetRequiredService<IMenuService>());
         builder.Services.AddSingleton(servicosDoApp.GetRequiredService<IPedidoService>());
+        builder.Services.AddSingleton(servicosDoApp.GetRequiredService<IDispositivoService>());
+        builder.Services.AddSingleton(servicosDoApp.GetRequiredService<CodigoPareamento>());
 
         builder.Services.ConfigureHttpJsonOptions(json =>
             json.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));

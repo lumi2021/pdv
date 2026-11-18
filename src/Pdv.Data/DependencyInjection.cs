@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton<IPedidoService, PedidoService>();
         services.AddSingleton<IEstoqueService, EstoqueService>();
         services.AddSingleton<IMenuService, MenuService>();
+        services.AddSingleton<IDispositivoService, DispositivoService>();
 
         return services;
     }

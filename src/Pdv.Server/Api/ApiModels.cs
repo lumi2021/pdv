@@ -6,6 +6,13 @@ namespace Pdv.Server.Api;
 
 public sealed record StatusApi(string Nome, string Versao, DateTime Agora);
 
+public sealed record ParearApi(string? Codigo, string? Nome);
+
+/// <summary>O token só é entregue uma vez, no pareamento; o celular o guarda e o envia em cada requisição.</summary>
+public sealed record ParearRespostaApi(string Token, string Nome);
+
+public sealed record EuApi(string Nome);
+
 /// <summary>Produto como o garçom vê. Não expõe receita nem saldos de estoque.</summary>
 public sealed record ProdutoCardapioApi(int Id, string Nome, string Categoria, decimal Preco, int? Disponivel);
 

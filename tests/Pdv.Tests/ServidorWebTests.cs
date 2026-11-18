@@ -19,21 +19,30 @@ public class ServidorWebTests
         public required TestDb.Ids Ids { get; init; }
         public required ServidorWeb Servidor { get; init; }
         public required HttpClient Http { get; init; }
+        public required CodigoPareamento Codigos { get; init; }
+        public required IDispositivoService Dispositivos { get; init; }
 
-        public static async Task<Contexto> CriarAsync(decimal pao = 10, decimal carne = 1000)
+        /// <summary>Cria o servidor; com <paramref name="parear"/> o cliente já entra autenticado como "Teste".</summary>
+        public static async Task<Contexto> CriarAsync(decimal pao = 10, decimal carne = 1000, bool parear = true)
         {
             var db = new TestDb();
             var ids = db.Seed(pao, carne);
-            var servidor = new ServidorWeb(Servicos(db), new ServidorWebOpcoes(PortaInicial: 0, SomenteLocal: true));
+            var codigos = new CodigoPareamento();
+            var dispositivos = new DispositivoService(db);
+            var servidor = new ServidorWeb(Servicos(db, codigos, dispositivos), new ServidorWebOpcoes(PortaInicial: 0, SomenteLocal: true));
             await servidor.IniciarAsync();
 
-            return new Contexto
+            var http = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{servidor.Porta}") };
+            var ctx = new Contexto { Db = db, Ids = ids, Servidor = servidor, Http = http, Codigos = codigos, Dispositivos = dispositivos };
+
+            if (parear)
             {
-                Db = db,
-                Ids = ids,
-                Servidor = servidor,
-                Http = new HttpClient { BaseAddress = new Uri($"http://127.0.0.1:{servidor.Porta}") }
-            };
+                var resposta = await http.PostAsJsonAsync("/api/parear", new { codigo = codigos.Atual().Codigo, nome = "Teste" });
+                var token = (await resposta.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("token").GetString();
+                http.DefaultRequestHeaders.Authorization = new("Bearer", token);
+            }
+
+            return ctx;
         }
 
         public Task<HttpResponseMessage> CriarPedidoAsync(int quantidade, string identificacao = "Mesa 1") =>
@@ -52,10 +61,12 @@ public class ServidorWebTests
         }
     }
 
-    private static IServiceProvider Servicos(TestDb db) =>
+    private static IServiceProvider Servicos(TestDb db, CodigoPareamento? codigos = null, IDispositivoService? dispositivos = null) =>
         new ServiceCollection()
             .AddSingleton<IMenuService>(new MenuService(db))
             .AddSingleton<IPedidoService>(new PedidoService(db))
+            .AddSingleton(dispositivos ?? new DispositivoService(db))
+            .AddSingleton(codigos ?? new CodigoPareamento())
             .BuildServiceProvider();
 
     private static async Task<JsonElement> Json(HttpResponseMessage resposta) =>
@@ -70,6 +81,60 @@ public class ServidorWebTests
 
         Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
         Assert.Equal("PDV Lanchonete", (await Json(resposta)).GetProperty("nome").GetString());
+    }
+
+    [Fact]
+    public async Task Rotas_da_api_exigem_pareamento_mas_status_e_pagina_sao_publicos()
+    {
+        await using var ctx = await Contexto.CriarAsync(parear: false);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ctx.Http.GetAsync("/api/cardapio")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ctx.Http.GetAsync("/api/pedidos")).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ctx.CriarPedidoAsync(1)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ctx.Http.GetAsync("/api/status")).StatusCode);
+
+        var pagina = await ctx.Http.GetAsync("/");
+        Assert.Equal(HttpStatusCode.OK, pagina.StatusCode);
+        Assert.Contains("PDV", await pagina.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task Parear_com_codigo_certo_devolve_token_que_identifica_o_celular()
+    {
+        await using var ctx = await Contexto.CriarAsync(parear: false);
+
+        var resposta = await ctx.Http.PostAsJsonAsync("/api/parear", new { codigo = ctx.Codigos.Atual().Codigo.ToLowerInvariant(), nome = "Maria" });
+
+        Assert.Equal(HttpStatusCode.OK, resposta.StatusCode);
+        var token = (await Json(resposta)).GetProperty("token").GetString();
+        ctx.Http.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+        var eu = await Json(await ctx.Http.GetAsync("/api/eu"));
+        Assert.Equal("Maria", eu.GetProperty("nome").GetString());
+    }
+
+    [Fact]
+    public async Task Parear_com_codigo_errado_responde_403()
+    {
+        await using var ctx = await Contexto.CriarAsync(parear: false);
+
+        var resposta = await ctx.Http.PostAsJsonAsync("/api/parear", new { codigo = "ZZZZZZZZ", nome = "Maria" });
+
+        Assert.Equal(HttpStatusCode.Forbidden, resposta.StatusCode);
+        Assert.False(string.IsNullOrWhiteSpace((await Json(resposta)).GetProperty("mensagem").GetString()));
+        Assert.Empty(await ctx.Dispositivos.ListarAsync());
+    }
+
+    [Fact]
+    public async Task Token_revogado_perde_o_acesso()
+    {
+        await using var ctx = await Contexto.CriarAsync();
+        Assert.Equal(HttpStatusCode.OK, (await ctx.Http.GetAsync("/api/cardapio")).StatusCode);
+
+        var dispositivo = Assert.Single(await ctx.Dispositivos.ListarAsync());
+        await ctx.Dispositivos.RevogarAsync(dispositivo.Id);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ctx.Http.GetAsync("/api/cardapio")).StatusCode);
     }
 
     [Fact]

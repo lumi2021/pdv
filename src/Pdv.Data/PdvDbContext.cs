@@ -12,6 +12,7 @@ public class PdvDbContext(DbContextOptions<PdvDbContext> options) : DbContext(op
     public DbSet<ItemPedido> ItensPedido => Set<ItemPedido>();
     public DbSet<MovimentoEstoque> MovimentosEstoque => Set<MovimentoEstoque>();
     public DbSet<NotaInterna> NotasInternas => Set<NotaInterna>();
+    public DbSet<Dispositivo> Dispositivos => Set<Dispositivo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -87,6 +88,13 @@ public class PdvDbContext(DbContextOptions<PdvDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.SetNull);
 
             e.HasIndex(x => new { x.IngredienteId, x.CriadoEm });
+        });
+
+        modelBuilder.Entity<Dispositivo>(e =>
+        {
+            e.Property(x => x.Nome).HasMaxLength(60).IsRequired();
+            e.Property(x => x.TokenHash).HasMaxLength(64).IsRequired();
+            e.HasIndex(x => x.TokenHash).IsUnique();
         });
 
         modelBuilder.Entity<NotaInterna>(e =>

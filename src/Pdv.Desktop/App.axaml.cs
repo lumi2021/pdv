@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using Pdv.Data;
 using Pdv.Desktop.ViewModels;
+using Pdv.Core.Services;
 using Pdv.Server;
 using Pdv.Desktop.Views;
 
@@ -48,6 +49,7 @@ public partial class App : Application
         services.AddSingleton<CardapioViewModel>();
 
         // Servidor web do PDV móvel: usa os mesmos serviços de domínio do app.
+        services.AddSingleton(new CodigoPareamento());
         services.AddSingleton(provider => new ServidorWeb(provider));
         services.AddSingleton<CelularViewModel>();
     }

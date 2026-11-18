@@ -14,4 +14,9 @@
     <ProjectReference Include="..\Pdv.Core\Pdv.Core.csproj" />
   </ItemGroup>
 
+  <!-- A página do garçom vai dentro do executável: nada para copiar nem instalar. Arquivos soltos, sem subpastas. -->
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot\*" LogicalName="web/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

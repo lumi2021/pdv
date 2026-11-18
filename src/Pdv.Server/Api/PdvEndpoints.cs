@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Pdv.Core.Entities;
 using Pdv.Core.Services;
@@ -10,18 +11,41 @@ namespace Pdv.Server.Api;
 
 internal static class PdvEndpoints
 {
+    private const string ChaveDoDispositivo = "pdv.dispositivo";
+
     private static readonly string Versao =
         typeof(PdvEndpoints).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     public static void Mapear(WebApplication app)
     {
         app.Use(TratarErrosAsync(app.Logger));
+        app.Use(ExigirPareamentoAsync);
 
-        app.MapGet("/", () => Results.Content(PaginaInicial.Html, "text/html; charset=utf-8"));
+        PaginaWeb.Mapear(app);
 
         var api = app.MapGroup("/api");
 
+        // ---- Públicas: o celular ainda não tem token ---------------------------------------
+
         api.MapGet("/status", () => new StatusApi("PDV Lanchonete", Versao, DateTime.UtcNow));
+
+        api.MapPost("/parear", async (ParearApi corpo, CodigoPareamento codigos, IDispositivoService dispositivos, CancellationToken ct) =>
+        {
+            if (!codigos.Validar(corpo.Codigo))
+            {
+                return Results.Json(
+                    new ErroApi("Código inválido ou vencido. Leia o QR Code de novo no computador."),
+                    statusCode: StatusCodes.Status403Forbidden);
+            }
+
+            var resultado = await dispositivos.ParearAsync(corpo.Nome ?? string.Empty, ct);
+            return Results.Ok(new ParearRespostaApi(resultado.Token, resultado.Dispositivo.Nome));
+        });
+
+        // ---- Exigem celular pareado --------------------------------------------------------
+
+        api.MapGet("/eu", (HttpContext contexto) =>
+            new EuApi(((Dispositivo)contexto.Items[ChaveDoDispositivo]!).Nome));
 
         api.MapGet("/cardapio", async (IMenuService menu, CancellationToken ct) =>
         {
@@ -74,6 +98,42 @@ internal static class PdvEndpoints
         p.Itens
             .Select(i => new ItemPedidoApi(i.ProdutoId, i.NomeProduto, i.PrecoUnitario, i.Quantidade, i.Observacao, i.Subtotal))
             .ToList());
+
+    /// <summary>Toda a API, exceto status e pareamento, só atende celulares com token válido.</summary>
+    private static async Task ExigirPareamentoAsync(HttpContext contexto, RequestDelegate proximo)
+    {
+        var caminho = contexto.Request.Path;
+        var protegido = caminho.StartsWithSegments("/api")
+                        && !caminho.StartsWithSegments("/api/status")
+                        && !caminho.StartsWithSegments("/api/parear");
+
+        if (protegido)
+        {
+            var dispositivos = contexto.RequestServices.GetRequiredService<IDispositivoService>();
+            var dispositivo = await dispositivos.AutenticarAsync(LerToken(contexto.Request), contexto.RequestAborted);
+
+            if (dispositivo is null)
+            {
+                contexto.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await contexto.Response.WriteAsJsonAsync(new ErroApi(
+                    "Este celular não está autorizado. Leia o QR Code no computador para conectar."));
+                return;
+            }
+
+            contexto.Items[ChaveDoDispositivo] = dispositivo;
+        }
+
+        await proximo(contexto);
+    }
+
+    private static string? LerToken(HttpRequest requisicao)
+    {
+        const string Prefixo = "Bearer ";
+        var cabecalho = requisicao.Headers.Authorization.ToString();
+        return cabecalho.StartsWith(Prefixo, StringComparison.OrdinalIgnoreCase)
+            ? cabecalho[Prefixo.Length..].Trim()
+            : null;
+    }
 
     /// <summary>Converte exceções em respostas JSON com mensagem em português; só o inesperado vira erro 500.</summary>
     private static Func<HttpContext, RequestDelegate, Task> TratarErrosAsync(ILogger logger) => async (contexto, proximo) =>
