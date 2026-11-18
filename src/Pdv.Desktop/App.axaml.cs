@@ -54,6 +54,11 @@ public partial class App : Application
         {
             Console.Error.WriteLine($"Aviso ao fechar o app: {ex}");
         }
+
+        // No Linux o Avalonia derruba a conexão DBus (menus, teclado) depois que a thread da interface já
+        // parou e isso estoura TaskCanceledException. Tudo nosso já foi encerrado acima, então termina aqui.
+        if (OperatingSystem.IsLinux())
+            Environment.Exit(0);
     }
 
     private static void ConfigureServices(IServiceCollection services)
