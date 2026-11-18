@@ -31,7 +31,7 @@ public partial class App : Application
             var mainViewModel = _services.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = mainViewModel };
             // O servidor web só implementa DisposeAsync; roda fora da thread da interface para não travar o fechamento.
-            desktop.Exit += (_, _) => Task.Run(() => _services!.DisposeAsync().AsTask()).GetAwaiter().GetResult();
+            desktop.Exit += (_, _) => Encerrar();
 
             // Prepara o banco em segundo plano enquanto a janela já mostra "Preparando o sistema...".
             // IniciarAsync trata os próprios erros e nunca lança.
@@ -39,6 +39,21 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Fecha o app sem nunca mostrar erro ao usuário: no fechamento não há mais o que fazer com uma falha.</summary>
+    private void Encerrar()
+    {
+        try
+        {
+            // O timer da tela do celular precisa parar na thread da interface, antes de desmontar os serviços.
+            _services?.GetService<CelularViewModel>()?.Parar();
+            Task.Run(() => _services!.DisposeAsync().AsTask()).Wait(TimeSpan.FromSeconds(10));
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Aviso ao fechar o app: {ex}");
+        }
     }
 
     private static void ConfigureServices(IServiceCollection services)

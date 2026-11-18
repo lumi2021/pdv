@@ -174,6 +174,13 @@ public partial class CelularViewModel : SecaoViewModel, IAtualizavel
         TemCelulares = Celulares.Count > 0;
     }
 
+    /// <summary>Para as atualizações periódicas. Chamado ao fechar o app.</summary>
+    public void Parar()
+    {
+        _relogio?.Stop();
+        _relogio = null;
+    }
+
     /// <summary>Atualiza a contagem do código e a lista de celulares enquanto o app está aberto.</summary>
     private void IniciarRelogio()
     {
