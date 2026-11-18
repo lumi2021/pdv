@@ -19,7 +19,16 @@ public static class DatabaseInitializer
         // Guarda para desenvolvimento: sem migration o Migrate não cria nenhuma tabela.
         if (!db.Database.GetMigrations().Any())
             throw new InvalidOperationException(
-                "Nenhuma migration encontrada no Pdv.Data. Rode: dotnet ef migrations add Inicial --project src/Pdv.Data");
+                "Nenhuma migration encontrada no Pdv.Data. Rode: ./scripts/nova-migration.sh Inicial (ou .ps1 no Windows).");
+
+#if DEBUG
+        // Só em desenvolvimento: entidades mudaram e falta gerar a migration. Dá o recado claro
+        // em vez do erro de SQL. No app instalado as migrations já vêm prontas dentro dele.
+        if (db.Database.HasPendingModelChanges())
+            throw new InvalidOperationException(
+                "O modelo do banco mudou e falta a migration. Rode: ./scripts/nova-migration.sh NomeDaMudanca " +
+                "(ou .ps1 no Windows) e abra o app de novo.");
+#endif
 
         await db.Database.MigrateAsync(ct);
 
