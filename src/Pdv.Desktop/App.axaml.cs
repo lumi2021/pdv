@@ -31,6 +31,8 @@ public partial class App : Application
             var mainViewModel = _services.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = mainViewModel };
             // O servidor web só implementa DisposeAsync; roda fora da thread da interface para não travar o fechamento.
+            // ShutdownRequested vem antes de a interface ser desmontada; Exit fica como garantia.
+            desktop.ShutdownRequested += (_, _) => Encerrar();
             desktop.Exit += (_, _) => Encerrar();
 
             // Prepara o banco em segundo plano enquanto a janela já mostra "Preparando o sistema...".
@@ -42,8 +44,13 @@ public partial class App : Application
     }
 
     /// <summary>Fecha o app sem nunca mostrar erro ao usuário: no fechamento não há mais o que fazer com uma falha.</summary>
+    private bool _encerrado;
+
     private void Encerrar()
     {
+        if (_encerrado) return;
+        _encerrado = true;
+
         try
         {
             // O timer da tela do celular precisa parar na thread da interface, antes de desmontar os serviços.
