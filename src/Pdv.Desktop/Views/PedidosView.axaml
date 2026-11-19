@@ -1,0 +1,127 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Pdv.Desktop.ViewModels"
+             x:Class="Pdv.Desktop.Views.PedidosView"
+             x:DataType="vm:PedidosViewModel">
+
+  <UserControl.Styles>
+    <Style Selector="TextBlock.espera">
+      <Setter Property="Opacity" Value="0.7" />
+    </Style>
+    <Style Selector="TextBlock.espera.atrasado">
+      <Setter Property="Foreground" Value="#DC2626" />
+      <Setter Property="Opacity" Value="1" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+  </UserControl.Styles>
+
+  <UserControl.Resources>
+    <DataTemplate x:Key="Cartao" x:DataType="vm:PedidoCardViewModel">
+      <Border Background="#14808080" BorderBrush="#40808080" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,8">
+        <StackPanel Spacing="6">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Text="{Binding Titulo}" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+            <TextBlock Grid.Column="1" Text="{Binding Espera}" Classes="espera" Classes.atrasado="{Binding Atrasado}"
+                       VerticalAlignment="Center" FontSize="13" />
+          </Grid>
+
+          <ItemsControl ItemsSource="{Binding Itens}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:ItemCardViewModel">
+                <StackPanel Margin="0,2">
+                  <TextBlock Text="{Binding Texto}" FontSize="16" />
+                  <TextBlock Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}" FontSize="13"
+                             FontStyle="Italic" Opacity="0.75" Margin="16,0,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <TextBlock Text="{Binding Observacao}" IsVisible="{Binding TemObservacao}" FontSize="13" Opacity="0.8" TextWrapping="Wrap" />
+
+          <!-- Ações normais -->
+          <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding NaoConfirmando}" Margin="0,4,0,0">
+            <Button Content="{Binding TextoAvancar}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    Command="{Binding $parent[UserControl].((vm:PedidosViewModel)DataContext).AvancarCommand}"
+                    CommandParameter="{Binding}" />
+            <Button Grid.Column="1" Content="Cancelar" Margin="8,0,0,0"
+                    Command="{Binding $parent[UserControl].((vm:PedidosViewModel)DataContext).PedirCancelamentoCommand}"
+                    CommandParameter="{Binding}" />
+          </Grid>
+
+          <!-- Confirmação de cancelamento -->
+          <StackPanel IsVisible="{Binding ConfirmandoCancelamento}" Spacing="6" Margin="0,4,0,0">
+            <TextBlock Text="Cancelar este pedido?" FontWeight="SemiBold" />
+            <TextBlock IsVisible="{Binding IngredientesJaUsados}" FontSize="13" Opacity="0.8" TextWrapping="Wrap"
+                       Text="Se a comida já foi feita, os ingredientes foram usados: escolha 'sem devolver'." />
+            <Button Content="Cancelar e devolver ao estoque" HorizontalAlignment="Stretch"
+                    Command="{Binding $parent[UserControl].((vm:PedidosViewModel)DataContext).CancelarDevolvendoCommand}"
+                    CommandParameter="{Binding}" />
+            <Button Content="Cancelar sem devolver (ingredientes perdidos)" HorizontalAlignment="Stretch"
+                    IsVisible="{Binding IngredientesJaUsados}"
+                    Command="{Binding $parent[UserControl].((vm:PedidosViewModel)DataContext).CancelarSemDevolverCommand}"
+                    CommandParameter="{Binding}" />
+            <Button Content="Voltar" HorizontalAlignment="Stretch"
+                    Command="{Binding $parent[UserControl].((vm:PedidosViewModel)DataContext).DesistirDoCancelamentoCommand}"
+                    CommandParameter="{Binding}" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid RowDefinitions="Auto,Auto,*">
+
+    <StackPanel Margin="0,0,0,12">
+      <TextBlock Text="Pedidos" FontSize="28" FontWeight="SemiBold" />
+      <TextBlock Text="A lista se atualiza sozinha quando chega ou muda um pedido" FontSize="16" Opacity="0.7" />
+    </StackPanel>
+
+    <Border Grid.Row="1" IsVisible="{Binding TemErro}" Background="#FEE2E2" CornerRadius="8" Padding="12" Margin="0,0,0,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding Erro}" Foreground="#991B1B" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="OK" Command="{Binding FecharErroCommand}" Margin="12,0,0,0" />
+      </Grid>
+    </Border>
+
+    <TextBlock Grid.Row="2" IsVisible="{Binding FilaVazia}" Text="Nenhum pedido na fila no momento."
+               FontSize="18" Opacity="0.6" HorizontalAlignment="Center" VerticalAlignment="Center" />
+
+    <Grid Grid.Row="2" ColumnDefinitions="*,*,*" IsVisible="{Binding !FilaVazia}">
+      <Grid Grid.Column="0" RowDefinitions="Auto,*" Margin="0,0,8,0">
+        <Border Background="#6B7280" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="A preparar" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+            <TextBlock Text="{Binding APreparar.Count}" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+          </StackPanel>
+        </Border>
+        <ScrollViewer Grid.Row="1">
+          <ItemsControl ItemsSource="{Binding APreparar}" ItemTemplate="{StaticResource Cartao}" />
+        </ScrollViewer>
+      </Grid>
+      <Grid Grid.Column="1" RowDefinitions="Auto,*" Margin="4,0">
+        <Border Background="#D97706" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Em preparo" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+            <TextBlock Text="{Binding EmPreparo.Count}" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+          </StackPanel>
+        </Border>
+        <ScrollViewer Grid.Row="1">
+          <ItemsControl ItemsSource="{Binding EmPreparo}" ItemTemplate="{StaticResource Cartao}" />
+        </ScrollViewer>
+      </Grid>
+      <Grid Grid.Column="2" RowDefinitions="Auto,*" Margin="8,0,0,0">
+        <Border Background="#16A34A" CornerRadius="6" Padding="12,8" Margin="0,0,0,8">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="Prontos" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+            <TextBlock Text="{Binding Prontos.Count}" FontWeight="SemiBold" FontSize="16" Foreground="White" />
+          </StackPanel>
+        </Border>
+        <ScrollViewer Grid.Row="1">
+          <ItemsControl ItemsSource="{Binding Prontos}" ItemTemplate="{StaticResource Cartao}" />
+        </ScrollViewer>
+      </Grid>
+    </Grid>
+
+  </Grid>
+</UserControl>

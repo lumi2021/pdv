@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddDbContextFactory<PdvDbContext>(options =>
             options.UseSqlite($"Data Source={path};Foreign Keys=True;Default Timeout=10"));
 
+        services.AddSingleton<PedidoEventos>();
         services.AddSingleton<IPedidoService, PedidoService>();
         services.AddSingleton<IEstoqueService, EstoqueService>();
         services.AddSingleton<IMenuService, MenuService>();

@@ -4,7 +4,7 @@ using Pdv.Core.Services;
 
 namespace Pdv.Data.Services;
 
-public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory) : IPedidoService
+public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory, PedidoEventos? eventos = null) : IPedidoService
 {
     private static readonly Dictionary<StatusPedido, StatusPedido> ProximoStatus = new()
     {
@@ -101,6 +101,7 @@ public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory) : IPe
 
         // Um único SaveChanges é uma única transação: pedido, itens, baixas e movimentos juntos.
         await db.SaveChangesAsync(ct);
+        Avisar(TipoEventoPedido.Criado, pedido);
         return pedido;
     }
 
@@ -120,6 +121,7 @@ public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory) : IPe
         pedido.Status = novoStatus;
         pedido.AtualizadoEm = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        Avisar(TipoEventoPedido.StatusAlterado, pedido);
         return pedido;
     }
 
@@ -161,6 +163,7 @@ public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory) : IPe
         pedido.Status = StatusPedido.Cancelado;
         pedido.AtualizadoEm = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
+        Avisar(TipoEventoPedido.Cancelado, pedido);
         return pedido;
     }
 
@@ -175,6 +178,9 @@ public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory) : IPe
             .OrderBy(p => p.CriadoEm).ThenBy(p => p.Id)
             .ToListAsync(ct);
     }
+
+    private void Avisar(TipoEventoPedido tipo, Pedido pedido) =>
+        eventos?.Publicar(new PedidoEvento(tipo, pedido.Id, pedido.Numero, pedido.Status));
 
     private static async Task<Pedido> CarregarAsync(PdvDbContext db, int pedidoId, CancellationToken ct) =>
         await db.Pedidos.Include(p => p.Itens).FirstOrDefaultAsync(p => p.Id == pedidoId, ct)

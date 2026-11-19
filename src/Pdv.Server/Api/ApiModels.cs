@@ -41,3 +41,6 @@ public sealed record FaltaApi(string Ingrediente, decimal Necessario, decimal Di
 
 /// <summary>Toda resposta de erro tem uma mensagem pronta para mostrar ao usuário.</summary>
 public sealed record ErroApi(string Mensagem, IReadOnlyList<FaltaApi>? Faltas = null);
+
+/// <summary>Aviso em tempo real: o celular busca a fila de novo ao receber.</summary>
+public sealed record PedidoMudouApi(string Tipo, int PedidoId, int Numero, StatusPedido Status);

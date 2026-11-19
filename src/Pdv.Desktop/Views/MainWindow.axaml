@@ -57,6 +57,10 @@
       <ContentControl Grid.Column="1" Content="{Binding SecaoAtual}" Margin="32">
         <ContentControl.DataTemplates>
           <!-- Telas prontas: devem vir antes do modelo genérico de "em construção". -->
+          <DataTemplate DataType="vm:PedidosViewModel">
+            <views:PedidosView />
+          </DataTemplate>
+
           <DataTemplate DataType="vm:EstoqueViewModel">
             <views:EstoqueView />
           </DataTemplate>

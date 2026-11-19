@@ -22,6 +22,7 @@ internal static class PdvEndpoints
         app.Use(ExigirPareamentoAsync);
 
         PaginaWeb.Mapear(app);
+        app.MapHub<PedidosHub>(PedidosHub.Caminho);
 
         var api = app.MapGroup("/api");
 
@@ -103,9 +104,10 @@ internal static class PdvEndpoints
     private static async Task ExigirPareamentoAsync(HttpContext contexto, RequestDelegate proximo)
     {
         var caminho = contexto.Request.Path;
-        var protegido = caminho.StartsWithSegments("/api")
-                        && !caminho.StartsWithSegments("/api/status")
-                        && !caminho.StartsWithSegments("/api/parear");
+        var protegido = (caminho.StartsWithSegments("/api")
+                         && !caminho.StartsWithSegments("/api/status")
+                         && !caminho.StartsWithSegments("/api/parear"))
+                        || caminho.StartsWithSegments("/hubs");
 
         if (protegido)
         {
@@ -130,9 +132,11 @@ internal static class PdvEndpoints
     {
         const string Prefixo = "Bearer ";
         var cabecalho = requisicao.Headers.Authorization.ToString();
-        return cabecalho.StartsWith(Prefixo, StringComparison.OrdinalIgnoreCase)
-            ? cabecalho[Prefixo.Length..].Trim()
-            : null;
+        if (cabecalho.StartsWith(Prefixo, StringComparison.OrdinalIgnoreCase))
+            return cabecalho[Prefixo.Length..].Trim();
+
+        // WebSocket de navegador não aceita cabeçalhos: o SignalR manda o token na URL (só no canal em tempo real).
+        return requisicao.Path.StartsWithSegments("/hubs") ? requisicao.Query["access_token"].ToString() : null;
     }
 
     /// <summary>Converte exceções em respostas JSON com mensagem em português; só o inesperado vira erro 500.</summary>

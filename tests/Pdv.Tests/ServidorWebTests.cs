@@ -138,6 +138,33 @@ public class ServidorWebTests
     }
 
     [Fact]
+    public async Task Canal_em_tempo_real_exige_pareamento()
+    {
+        await using var ctx = await Contexto.CriarAsync(parear: false);
+
+        // O SignalR começa com um POST de negociação; sem token válido ele não passa.
+        var semToken = await ctx.Http.PostAsync("/hubs/pedidos/negotiate?negotiateVersion=1", null);
+        Assert.Equal(HttpStatusCode.Unauthorized, semToken.StatusCode);
+
+        var tokenErrado = await ctx.Http.PostAsync("/hubs/pedidos/negotiate?negotiateVersion=1&access_token=invalido", null);
+        Assert.Equal(HttpStatusCode.Unauthorized, tokenErrado.StatusCode);
+    }
+
+    [Fact]
+    public async Task Canal_em_tempo_real_aceita_token_na_url_e_no_cabecalho()
+    {
+        await using var ctx = await Contexto.CriarAsync(); // já pareado: o cabeçalho tem o token
+        var token = ctx.Http.DefaultRequestHeaders.Authorization!.Parameter;
+
+        var porCabecalho = await ctx.Http.PostAsync("/hubs/pedidos/negotiate?negotiateVersion=1", null);
+        Assert.Equal(HttpStatusCode.OK, porCabecalho.StatusCode);
+
+        ctx.Http.DefaultRequestHeaders.Authorization = null;
+        var porUrl = await ctx.Http.PostAsync($"/hubs/pedidos/negotiate?negotiateVersion=1&access_token={token}", null);
+        Assert.Equal(HttpStatusCode.OK, porUrl.StatusCode);
+    }
+
+    [Fact]
     public async Task Cardapio_traz_disponibilidade_sem_expor_a_receita()
     {
         await using var ctx = await Contexto.CriarAsync(pao: 10, carne: 1000);

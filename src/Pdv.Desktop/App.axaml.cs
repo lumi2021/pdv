@@ -55,6 +55,7 @@ public partial class App : Application
         {
             // O timer da tela do celular precisa parar na thread da interface, antes de desmontar os serviços.
             _services?.GetService<CelularViewModel>()?.Parar();
+            _services?.GetService<PedidosViewModel>()?.Parar();
             Task.Run(() => _services!.DisposeAsync().AsTask()).Wait(TimeSpan.FromSeconds(10));
         }
         catch (Exception ex)
@@ -72,6 +73,7 @@ public partial class App : Application
     {
         services.AddPdvData();
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<PedidosViewModel>();
         services.AddSingleton<EstoqueViewModel>();
         services.AddSingleton<CardapioViewModel>();
 

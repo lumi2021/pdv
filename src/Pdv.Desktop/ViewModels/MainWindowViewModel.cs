@@ -71,7 +71,7 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
 
     private void CriarSecoes()
     {
-        Secoes.Add(new SecaoViewModel("Pedidos", "🧾", "Fila de pedidos em tempo real", passo: 9));
+        Secoes.Add(services.GetRequiredService<PedidosViewModel>());
         Secoes.Add(services.GetRequiredService<EstoqueViewModel>());
         Secoes.Add(services.GetRequiredService<CardapioViewModel>());
         Secoes.Add(new SecaoViewModel("Notas", "📄", "Notas internas dos pedidos", passo: 10));

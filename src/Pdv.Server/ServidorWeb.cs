@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Json;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -22,6 +23,8 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
     private readonly ServidorWebOpcoes _opcoes = opcoes ?? new ServidorWebOpcoes();
     private readonly SemaphoreSlim _ciclo = new(1, 1);
     private WebApplication? _app;
+    private PedidoEventos? _eventos;
+    private Action<PedidoEvento>? _assinante;
 
     public bool Ativo => _app is not null;
     public int Porta { get; private set; }
@@ -62,6 +65,7 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
                     await app.StartAsync(ct);
                     _app = app;
                     Porta = LerPortaReal(app, porta);
+                    Assinar(app);
                     return;
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -90,6 +94,7 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
 
             _app = null;
             Porta = 0;
+            Desassinar();
 
             using var limite = new CancellationTokenSource(TimeSpan.FromSeconds(5));
             try { await app.StopAsync(limite.Token); }
@@ -124,6 +129,10 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
         builder.Services.AddSingleton(servicosDoApp.GetRequiredService<IPedidoService>());
         builder.Services.AddSingleton(servicosDoApp.GetRequiredService<IDispositivoService>());
         builder.Services.AddSingleton(servicosDoApp.GetRequiredService<CodigoPareamento>());
+        builder.Services.AddSingleton(servicosDoApp.GetService<PedidoEventos>() ?? new PedidoEventos());
+
+        builder.Services.AddSignalR().AddJsonProtocol(json =>
+            json.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
         builder.Services.ConfigureHttpJsonOptions(json =>
             json.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
@@ -131,6 +140,37 @@ public sealed class ServidorWeb(IServiceProvider servicosDoApp, ServidorWebOpcoe
         var app = builder.Build();
         PdvEndpoints.Mapear(app);
         return app;
+    }
+
+    /// <summary>Repassa cada mudança na fila aos celulares conectados.</summary>
+    private void Assinar(WebApplication app)
+    {
+        var hub = app.Services.GetRequiredService<IHubContext<PedidosHub>>();
+        _eventos = app.Services.GetRequiredService<PedidoEventos>();
+        _assinante = evento => _ = EnviarAsync(hub, evento);
+        _eventos.Ocorreu += _assinante;
+    }
+
+    private void Desassinar()
+    {
+        if (_eventos is not null && _assinante is not null)
+            _eventos.Ocorreu -= _assinante;
+
+        _eventos = null;
+        _assinante = null;
+    }
+
+    private static async Task EnviarAsync(IHubContext<PedidosHub> hub, PedidoEvento evento)
+    {
+        try
+        {
+            await hub.Clients.All.SendAsync(
+                PedidosHub.MensagemPedidoMudou, new PedidoMudouApi(evento.Tipo.ToString(), evento.PedidoId, evento.Numero, evento.Status));
+        }
+        catch
+        {
+            // Sem celular conectado ou conexão caindo: o celular se atualiza sozinho no próximo ciclo.
+        }
     }
 
     private static int LerPortaReal(WebApplication app, int solicitada)

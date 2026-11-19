@@ -4,7 +4,9 @@
 
 const CHAVE_DISPOSITIVO = 'pdv.dispositivo';
 const CHAVE_RASCUNHO = 'pdv.rascunho';
-const INTERVALO_ATUALIZACAO_MS = 5000;
+// Com o canal em tempo real ativo a busca periódica é só uma rede de segurança.
+const INTERVALO_SEM_TEMPO_REAL_MS = 5000;
+const INTERVALO_COM_TEMPO_REAL_MS = 30000;
 
 const moeda = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const dinheiro = (valor) => moeda.format(valor);
@@ -37,6 +39,10 @@ const estado = {
 const refs = {};
 let temporizador = null;
 let temporizadorAviso = null;
+let conexaoHub = null;
+let tempoRealAtivo = false;
+let temporizadorHub = null;
+let temporizadorRajada = null;
 
 /* ------------------------------------------------------------------ utilidades */
 
@@ -211,14 +217,79 @@ function restaurarRascunho() {
 /* ------------------------------------------------------------------ atualização periódica */
 
 function iniciarAtualizacoes() {
-  pararAtualizacoes();
-  temporizador = setInterval(atualizar, INTERVALO_ATUALIZACAO_MS);
+  clearInterval(temporizador);
+  temporizador = setInterval(atualizar, tempoRealAtivo ? INTERVALO_COM_TEMPO_REAL_MS : INTERVALO_SEM_TEMPO_REAL_MS);
+  iniciarTempoReal();
 }
 
 function pararAtualizacoes() {
   clearInterval(temporizador);
   temporizador = null;
+  pararTempoReal();
 }
+
+/* ------------------------------------------------------------------ tempo real (SignalR) */
+
+function definirTempoReal(ativo) {
+  if (tempoRealAtivo === ativo) return;
+  tempoRealAtivo = ativo;
+  if (temporizador) iniciarAtualizacoes();
+}
+
+/** Vários avisos seguidos (um pedido com vários passos) viram uma única busca. */
+function agendarAtualizacao() {
+  clearTimeout(temporizadorRajada);
+  temporizadorRajada = setTimeout(atualizar, 150);
+}
+
+function iniciarTempoReal() {
+  if (conexaoHub || !window.signalR || !estado.token) return;
+
+  const conexao = new signalR.HubConnectionBuilder()
+    .withUrl('/hubs/pedidos', { accessTokenFactory: () => estado.token })
+    .withAutomaticReconnect([0, 1000, 2000, 5000, 10000])
+    .configureLogging(signalR.LogLevel.None)
+    .build();
+  conexaoHub = conexao;
+
+  conexao.on('pedidoMudou', agendarAtualizacao);
+  conexao.onreconnecting(() => definirTempoReal(false));
+  conexao.onreconnected(() => { definirTempoReal(true); atualizar(); });
+  conexao.onclose(() => {
+    if (conexaoHub !== conexao) return;
+    conexaoHub = null;
+    definirTempoReal(false);
+    reagendarTempoReal();
+  });
+
+  conexao.start().then(() => {
+    if (conexaoHub !== conexao) { conexao.stop(); return; }
+    definirTempoReal(true);
+    atualizar(); // pode ter mudado algo entre a última busca e a conexão
+  }).catch(() => {
+    if (conexaoHub !== conexao) return;
+    conexaoHub = null;
+    definirTempoReal(false);
+    reagendarTempoReal();
+  });
+}
+
+function reagendarTempoReal() {
+  clearTimeout(temporizadorHub);
+  temporizadorHub = setTimeout(() => { if (estado.token && temporizador) iniciarTempoReal(); }, 10000);
+}
+
+function pararTempoReal() {
+  clearTimeout(temporizadorHub);
+  clearTimeout(temporizadorRajada);
+  const conexao = conexaoHub;
+  conexaoHub = null;
+  tempoRealAtivo = false;
+  if (conexao) conexao.stop().catch(() => {});
+}
+
+// Ao voltar para o app (celular desbloqueado), atualiza na hora em vez de esperar o próximo ciclo.
+document.addEventListener('visibilitychange', () => { if (!document.hidden && temporizador) atualizar(); });
 
 async function atualizar() {
   if (document.hidden || !estado.token || estado.enviando) return;
