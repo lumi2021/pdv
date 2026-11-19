@@ -21,7 +21,7 @@ public partial class PedidosViewModel : SecaoViewModel, IAtualizavel
         _pedidos = pedidos;
 
         // Avisos chegam de qualquer thread (celular, outra tela): volta para a interface antes de mexer nas listas.
-        eventos.Ocorreu += _ => Dispatcher.UIThread.Post(() => _ = AtualizarAsync());
+        eventos.Ocorreu += evento => Dispatcher.UIThread.Post(() => _ = AtualizarAsync());
 
         // Rede de segurança e relógio: refaz a leitura e os "há N min" mesmo sem nenhum aviso.
         _relogio = new DispatcherTimer { Interval = TimeSpan.FromSeconds(30) };
