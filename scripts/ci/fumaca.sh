@@ -8,6 +8,11 @@ exe="${1:?Informe o caminho do executável}"
 log="$(mktemp)"
 falhou=0
 
+# O nome do processo no Linux é o nome do arquivo usado para abrir (um atalho como /usr/bin/pdv-lanchonete
+# vira "pdv-lanchonete") e é cortado em 15 letras. Por isso procuramos pelo nome do próprio executável.
+nome="$(basename "$exe")"
+nome="${nome:0:15}"
+
 verifica() { # descrição, comando...
     local desc="$1"; shift
     if "$@" >/dev/null 2>&1; then echo "OK    $desc"; else echo "FALHA $desc"; falhou=1; fi
@@ -31,7 +36,7 @@ done
 if [ -z "$porta" ]; then
     echo "FALHA o servidor do celular não respondeu em 90 s"
     echo "---- saída do app ----"; cat "$log"
-    pkill -9 -x PdvLanchonete 2>/dev/null; exit 1
+    pkill -9 -x "$nome" 2>/dev/null; exit 1
 fi
 echo "OK    servidor respondendo na porta $porta"
 
@@ -48,9 +53,9 @@ if [ -n "$ip" ]; then
     verifica "responde também pelo endereço da rede ($ip)" bash -c "curl -fs --max-time 5 'http://$ip:$porta/api/status' | grep -q 'PDV Lanchonete'"
 fi
 
-verifica "o app continua aberto (não caiu)" pgrep -x PdvLanchonete
+verifica "o app continua aberto (não caiu)" pgrep -x "$nome"
 
-pkill -9 -x PdvLanchonete 2>/dev/null
+pkill -9 -x "$nome" 2>/dev/null
 sleep 1
 if [ "$falhou" -ne 0 ]; then echo "---- saída do app ----"; cat "$log"; exit 1; fi
 echo "TUDO OK"
