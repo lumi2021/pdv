@@ -64,6 +64,7 @@
         <TextBlock Text="Para quem dá suporte" FontSize="20" FontWeight="SemiBold" />
         <TextBlock Text="Pasta dos dados:" FontSize="13" Opacity="0.7" />
         <SelectableTextBlock Text="{Binding PastaDosDados}" FontSize="13" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding Versao, StringFormat='Versão {0}'}" FontSize="13" Opacity="0.7" />
         <Button Content="Abrir pasta de registros (erros)" Command="{Binding AbrirPastaDeRegistrosCommand}"
                 HorizontalAlignment="Left" />
       </StackPanel>

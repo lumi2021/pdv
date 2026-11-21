@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PDV Lanchonete
+Comment=Ponto de venda para lanchonete
+Exec=/usr/bin/pdv-lanchonete
+Icon=pdv-lanchonete
+Terminal=false
+Categories=Office;

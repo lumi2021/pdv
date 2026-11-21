@@ -71,20 +71,76 @@ jobs:
           -p:Version=${{ steps.versao.outputs.numero }}
           -o publicado
 
+      # ---------------------------------------------------------------- Windows
+      - name: Instalar o Inno Setup
+        if: runner.os == 'Windows'
+        run: choco install innosetup -y --no-progress
+
+      - name: Gerar o instalador (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" /DAppVersion=${{ steps.versao.outputs.numero }} installer\windows\PdvLanchonete.iss
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # Instala de verdade (em silêncio), abre o programa instalado e confere que o celular consegue acessar.
+      # Não derruba a publicação: o runner do Windows nem sempre tem uma área de trabalho para abrir janelas.
+      - name: Testar instalação e abertura (Windows)
+        if: runner.os == 'Windows'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $destino = Join-Path $PWD 'instalado'
+          Start-Process -FilePath (Get-ChildItem saida\PdvLanchonete-Setup-*.exe).FullName `
+            -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=$destino" -Wait
+          if (-not (Test-Path "$destino\PdvLanchonete.exe")) { throw 'o instalador não instalou o programa' }
+          .\scripts\ci\fumaca.ps1 "$destino\PdvLanchonete.exe"
+          if ($LASTEXITCODE -ne 0) { throw 'o teste de fumaça falhou' }
+          Start-Process -FilePath "$destino\unins000.exe" -ArgumentList '/VERYSILENT' -Wait
+
       - name: Compactar (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path publicado/* -DestinationPath PdvLanchonete-${{ matrix.rid }}.zip
+
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: PdvLanchonete-${{ matrix.rid }}
+          path: |
+            saida/PdvLanchonete-Setup-*.exe
+            PdvLanchonete-${{ matrix.rid }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      # ---------------------------------------------------------------- Linux
+      - name: Dependências do teste (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb libfontconfig1 libice6 libsm6 libx11-6
+
+      - name: Gerar o pacote .deb (Linux)
+        if: runner.os == 'Linux'
+        run: installer/linux/build-deb.sh "${{ steps.versao.outputs.numero }}" publicado "pdv-lanchonete_${{ steps.versao.outputs.numero }}_amd64.deb"
+
+      # Instala o .deb como o usuário faria, abre o programa numa tela virtual e confere o servidor do celular.
+      - name: Testar instalação e abertura (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get install -y -qq "./pdv-lanchonete_${{ steps.versao.outputs.numero }}_amd64.deb"
+          scripts/ci/fumaca.sh /usr/bin/pdv-lanchonete
 
       - name: Compactar (Linux)
         if: runner.os == 'Linux'
         run: tar -czf PdvLanchonete-${{ matrix.rid }}.tar.gz -C publicado .
 
       - uses: actions/upload-artifact@v4
+        if: runner.os == 'Linux'
         with:
           name: PdvLanchonete-${{ matrix.rid }}
           path: |
-            PdvLanchonete-${{ matrix.rid }}.zip
+            pdv-lanchonete_*_amd64.deb
             PdvLanchonete-${{ matrix.rid }}.tar.gz
           if-no-files-found: error
           retention-days: 30

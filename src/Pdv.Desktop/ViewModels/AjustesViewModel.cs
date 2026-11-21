@@ -24,6 +24,20 @@ public partial class AjustesViewModel : SecaoViewModel, IAtualizavel
 
     public ObservableCollection<BackupLinha> Backups { get; } = [];
 
+    /// <summary>Versão do programa (a mesma da tag do release), para quem dá suporte.</summary>
+    public string Versao { get; } = LerVersao();
+
+    private static string LerVersao()
+    {
+        var v = System.Reflection.Assembly.GetExecutingAssembly()
+            .GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>()
+            .FirstOrDefault()?.InformationalVersion;
+
+        // "1.2.3+abcdef" -> "1.2.3"
+        return string.IsNullOrWhiteSpace(v) ? "desconhecida" : v.Split('+')[0];
+    }
+
     public string PastaDosDados => DatabasePaths.DataFolder();
     public string PastaDeBackups => _backup.Pasta;
 

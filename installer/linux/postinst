@@ -1,0 +1,7 @@
+#!/bin/sh
+# Se o firewall do Ubuntu (ufw) estiver ligado, libera as portas que o app usa para o celular do garçom.
+set -e
+if command -v ufw >/dev/null 2>&1 && ufw status 2>/dev/null | grep -q "Status: active"; then
+    ufw allow 5080:5099/tcp comment 'PDV Lanchonete' >/dev/null 2>&1 || true
+fi
+exit 0
