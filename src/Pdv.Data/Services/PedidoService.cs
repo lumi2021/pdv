@@ -120,6 +120,11 @@ public sealed class PedidoService(IDbContextFactory<PdvDbContext> factory, Pedid
 
         pedido.Status = novoStatus;
         pedido.AtualizadoEm = DateTime.UtcNow;
+
+        // A nota nasce junto com a entrega, na mesma transação: não existe pedido entregue sem nota.
+        if (novoStatus == StatusPedido.Entregue)
+            db.NotasInternas.Add(NotaBuilder.Criar(pedido, await NotaService.ProximoNumeroAsync(db, ct)));
+
         await db.SaveChangesAsync(ct);
         Avisar(TipoEventoPedido.StatusAlterado, pedido);
         return pedido;

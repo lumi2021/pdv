@@ -74,6 +74,7 @@ public partial class App : Application
         services.AddPdvData();
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<PedidosViewModel>();
+        services.AddSingleton<NotasViewModel>();
         services.AddSingleton<EstoqueViewModel>();
         services.AddSingleton<CardapioViewModel>();
 

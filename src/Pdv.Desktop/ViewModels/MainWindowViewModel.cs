@@ -1,3 +1,4 @@
+using Pdv.Core.Services;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -40,6 +41,10 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
             // Em segundo plano para a janela não congelar na primeira execução.
             await Task.Run(() => DatabaseInitializer.InitializeAsync(services));
 
+            // Pedidos entregues antes da nota existir ganham a nota agora. Falha aqui não impede de abrir o app.
+            try { await services.GetRequiredService<INotaService>().EmitirPendentesAsync(); }
+            catch { /* a nota pode ser emitida na próxima abertura */ }
+
             // Só depois do banco pronto o servidor do celular pode atender pedidos.
             // Falha aqui não impede o uso do app: a seção Celular mostra o problema.
             await services.GetRequiredService<CelularViewModel>().IniciarServidorAsync();
@@ -74,7 +79,7 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
         Secoes.Add(services.GetRequiredService<PedidosViewModel>());
         Secoes.Add(services.GetRequiredService<EstoqueViewModel>());
         Secoes.Add(services.GetRequiredService<CardapioViewModel>());
-        Secoes.Add(new SecaoViewModel("Notas", "📄", "Notas internas dos pedidos", passo: 10));
+        Secoes.Add(services.GetRequiredService<NotasViewModel>());
         Secoes.Add(services.GetRequiredService<CelularViewModel>());
     }
 }
