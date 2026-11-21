@@ -19,7 +19,7 @@ public static class NotaPdf
 
     public static string Moeda(decimal valor) => valor.ToString("C2", PtBr);
 
-    public static void Gerar(NotaDetalhe nota, Stream destino)
+    public static void Gerar(NotaDetalhe nota, string nomeDoNegocio, Stream destino)
     {
         var emitida = nota.EmitidaEmUtc.ToLocalTime();
         var c = nota.Conteudo;
@@ -32,7 +32,7 @@ public static class NotaPdf
 
             pagina.Header().Column(coluna =>
             {
-                coluna.Item().Text("PDV Lanchonete").FontSize(10).FontColor(Colors.Grey.Darken1);
+                coluna.Item().Text(nomeDoNegocio).FontSize(10).FontColor(Colors.Grey.Darken1);
                 coluna.Item().Text($"Nota interna nº {nota.Numero:0000}").FontSize(20).SemiBold();
                 coluna.Item().PaddingTop(2).Text($"Pedido #{c.NumeroDoPedido} · {c.Identificacao}");
                 coluna.Item().Text($"Emitida em {emitida:dd/MM/yyyy HH:mm}").FontColor(Colors.Grey.Darken1);

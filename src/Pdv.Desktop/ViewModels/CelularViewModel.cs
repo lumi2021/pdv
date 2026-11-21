@@ -3,6 +3,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 using Pdv.Server;
 using QRCoder;
@@ -67,6 +68,7 @@ public partial class CelularViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
+            RegistroDeErros.Registrar(ex, "Iniciar o servidor do celular");
             DetalhesErro = ex.InnerException is null ? ex.Message : $"{ex.Message} ({ex.InnerException.Message})";
         }
 
@@ -90,7 +92,7 @@ public partial class CelularViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            DetalhesErro = ex.Message;
+            DetalhesErro = MensagemDeErro.Para(ex, "atualizar os dados do celular");
         }
     }
 
@@ -115,7 +117,7 @@ public partial class CelularViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            DetalhesErro = ex.Message;
+            DetalhesErro = MensagemDeErro.Para(ex, "desconectar o celular");
         }
 
         await AtualizarCelularesAsync();

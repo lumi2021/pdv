@@ -1,3 +1,4 @@
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -12,7 +13,7 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
     public ObservableCollection<SecaoViewModel> Secoes { get; } = [];
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Iniciando), nameof(Pronto), nameof(ComErro))]
+    [NotifyPropertyChangedFor(nameof(Iniciando), nameof(PrimeiroUso), nameof(Pronto), nameof(ComErro))]
     private EstadoApp _estado = EstadoApp.Iniciando;
 
     [ObservableProperty]
@@ -24,7 +25,23 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
     [ObservableProperty]
     private string _detalhesErro = string.Empty;
 
+    [ObservableProperty]
+    private AssistenteViewModel? _assistente;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TemAviso))]
+    private string _aviso = string.Empty;
+
+    public bool TemAviso => Aviso.Length > 0;
+
+    /// <summary>Falha inesperada em qualquer tela: avisa em português simples e o app continua aberto.</summary>
+    public void MostrarAviso(string mensagem) => Aviso = mensagem;
+
+    [RelayCommand]
+    private void FecharAviso() => Aviso = string.Empty;
+
     public bool Iniciando => Estado == EstadoApp.Iniciando;
+    public bool PrimeiroUso => Estado == EstadoApp.PrimeiroUso;
     public bool Pronto => Estado == EstadoApp.Pronto;
     public bool ComErro => Estado == EstadoApp.Erro;
 
@@ -49,19 +66,45 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
             // Falha aqui não impede o uso do app: a seção Celular mostra o problema.
             await services.GetRequiredService<CelularViewModel>().IniciarServidorAsync();
 
-            if (Secoes.Count == 0)
-                CriarSecoes();
+            // Daqui para frente o banco existe: liga a rotina de cópias de segurança.
+            services.GetRequiredService<BackupService>().Iniciar();
 
-            SecaoAtual ??= Secoes[0];
-            Estado = EstadoApp.Pronto;
+            var configuracao = services.GetRequiredService<IConfiguracaoService>();
+            if (!configuracao.Atual.PrimeiroUsoConcluido)
+            {
+                Assistente = new AssistenteViewModel(
+                    configuracao,
+                    services.GetRequiredService<IEstoqueService>(),
+                    services.GetRequiredService<IMenuService>(),
+                    services.GetRequiredService<CelularViewModel>(),
+                    FinalizarInicioAsync);
+                await Assistente.PrepararAsync();
+                Estado = EstadoApp.PrimeiroUso;
+                return;
+            }
+
+            await FinalizarInicioAsync();
         }
         catch (Exception ex)
         {
+            RegistroDeErros.Registrar(ex, "Iniciar o app");
             MensagemErro = "Não foi possível preparar o banco de dados. Feche o programa e abra de novo. " +
+                           $"Seus dados antigos estão protegidos por cópias de segurança em {DatabasePaths.BackupFolder()}. " +
                            "Se o problema continuar, chame quem instalou o sistema e mostre os detalhes abaixo.";
             DetalhesErro = $"Pasta dos dados: {DatabasePaths.DataFolder()}{Environment.NewLine}{Environment.NewLine}{ex}";
             Estado = EstadoApp.Erro;
         }
+    }
+
+    /// <summary>Monta o menu lateral e abre o app. Chamado direto ao iniciar ou ao fim do assistente.</summary>
+    private Task FinalizarInicioAsync()
+    {
+        if (Secoes.Count == 0)
+            CriarSecoes();
+
+        SecaoAtual ??= Secoes[0];
+        Estado = EstadoApp.Pronto;
+        return Task.CompletedTask;
     }
 
     [RelayCommand]
@@ -81,5 +124,6 @@ public partial class MainWindowViewModel(IServiceProvider services) : ViewModelB
         Secoes.Add(services.GetRequiredService<CardapioViewModel>());
         Secoes.Add(services.GetRequiredService<NotasViewModel>());
         Secoes.Add(services.GetRequiredService<CelularViewModel>());
+        Secoes.Add(services.GetRequiredService<AjustesViewModel>());
     }
 }

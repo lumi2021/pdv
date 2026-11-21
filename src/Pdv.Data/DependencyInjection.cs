@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 using Pdv.Data.Services;
 
@@ -17,6 +18,12 @@ public static class DependencyInjection
 
         services.AddDbContextFactory<PdvDbContext>(options =>
             options.UseSqlite($"Data Source={path};Foreign Keys=True;Default Timeout=10"));
+
+        // Backups e configuração ficam ao lado do banco (a pasta de dados do usuário, ou a do caminho informado).
+        var pasta = Path.GetDirectoryName(Path.GetFullPath(path))!;
+        // Por fábrica, para o contêiner encerrar a rotina do backup ao fechar o app.
+        services.AddSingleton(_ => new BackupService(path, Path.Combine(pasta, "backups")));
+        services.AddSingleton<IConfiguracaoService>(new ConfiguracaoService(Path.Combine(pasta, "config.json")));
 
         services.AddSingleton<PedidoEventos>();
         services.AddSingleton<IPedidoService, PedidoService>();

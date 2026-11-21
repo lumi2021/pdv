@@ -3,6 +3,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pdv.Core.Entities;
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 
 namespace Pdv.Desktop.ViewModels;
@@ -70,7 +71,7 @@ public partial class PedidosViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            Erro = $"Não foi possível ler a fila de pedidos: {ex.Message}";
+            Erro = MensagemDeErro.Para(ex, "ler a fila de pedidos");
         }
         finally
         {
@@ -132,7 +133,7 @@ public partial class PedidosViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            Erro = $"Não foi possível concluir: {ex.Message}";
+            Erro = MensagemDeErro.Para(ex, "concluir esta ação");
         }
 
         await AtualizarAsync();

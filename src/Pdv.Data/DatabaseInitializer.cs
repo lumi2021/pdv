@@ -30,6 +30,23 @@ public static class DatabaseInitializer
                 "(ou .ps1 no Windows) e abra o app de novo.");
 #endif
 
+        // Versão nova do app com mudanças no banco: guarda uma cópia antes de mexer. Se a cópia falhar,
+        // o erro vai para o registro e a atualização segue (travar a abertura seria pior para quem usa).
+        var temDadosAnteriores = (await db.Database.GetAppliedMigrationsAsync(ct)).Any();
+        var temMigrationNova = (await db.Database.GetPendingMigrationsAsync(ct)).Any();
+        if (temDadosAnteriores && temMigrationNova)
+        {
+            try
+            {
+                if (services.GetService<BackupService>() is { } backup)
+                    await backup.FazerAsync(TipoBackup.AntesDeAtualizar, ct);
+            }
+            catch (Exception ex)
+            {
+                Pdv.Core.Infra.RegistroDeErros.Registrar(ex, "Backup antes de atualizar o banco");
+            }
+        }
+
         await db.Database.MigrateAsync(ct);
 
         // WAL: leituras não bloqueiam escritas (app e servidor web usam o mesmo arquivo)

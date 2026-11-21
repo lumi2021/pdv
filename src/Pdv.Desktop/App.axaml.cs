@@ -1,7 +1,9 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using Avalonia.Threading;
 using Microsoft.Extensions.DependencyInjection;
+using Pdv.Core.Infra;
 using Pdv.Data;
 using Pdv.Desktop.ViewModels;
 using Pdv.Core.Services;
@@ -18,7 +20,21 @@ public partial class App : Application
     public static IServiceProvider Services => ((App)Current!)._services
         ?? throw new InvalidOperationException("O app ainda não foi inicializado.");
 
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        RegistroDeErros.Iniciar(Path.Combine(DatabasePaths.DataFolder(), "logs"));
+
+        // Tudo o que escapar fica no registro, para quem der suporte, em vez de sumir.
+        AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            RegistroDeErros.Registrar(e.ExceptionObject as Exception ?? new Exception(e.ExceptionObject?.ToString()), "Erro fatal");
+        TaskScheduler.UnobservedTaskException += (_, e) =>
+        {
+            RegistroDeErros.Registrar(e.Exception, "Tarefa sem tratamento");
+            e.SetObserved();
+        };
+
+        AvaloniaXamlLoader.Load(this);
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -30,6 +46,13 @@ public partial class App : Application
 
             var mainViewModel = _services.GetRequiredService<MainWindowViewModel>();
             desktop.MainWindow = new MainWindow { DataContext = mainViewModel };
+
+            // Falha inesperada numa tela: avisa em português simples e deixa o app aberto.
+            Dispatcher.UIThread.UnhandledException += (_, e) =>
+            {
+                mainViewModel.MostrarAviso(MensagemDeErro.Para(e.Exception, "fazer isso"));
+                e.Handled = true;
+            };
             // O servidor web só implementa DisposeAsync; roda fora da thread da interface para não travar o fechamento.
             // ShutdownRequested vem antes de a interface ser desmontada; Exit fica como garantia.
             desktop.ShutdownRequested += (_, _) => Encerrar();
@@ -75,6 +98,7 @@ public partial class App : Application
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<PedidosViewModel>();
         services.AddSingleton<NotasViewModel>();
+        services.AddSingleton<AjustesViewModel>();
         services.AddSingleton<EstoqueViewModel>();
         services.AddSingleton<CardapioViewModel>();
 

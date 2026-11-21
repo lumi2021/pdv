@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Pdv.Desktop.ViewModels"
+             xmlns:views="using:Pdv.Desktop.Views"
+             x:Class="Pdv.Desktop.Views.AssistenteView"
+             x:DataType="vm:AssistenteViewModel">
+
+  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+    <StackPanel MaxWidth="680" Margin="32,32" Spacing="16" HorizontalAlignment="Center">
+
+      <TextBlock Text="{Binding Contagem}" Opacity="0.6" FontSize="14" />
+      <TextBlock Text="{Binding Titulo}" FontSize="30" FontWeight="SemiBold" TextWrapping="Wrap" />
+
+      <!-- Boas-vindas -->
+      <StackPanel IsVisible="{Binding EhBoasVindas}" Spacing="12">
+        <TextBlock FontSize="18" TextWrapping="Wrap"
+                   Text="Vamos deixar tudo pronto em poucos minutos. Você não precisa instalar nem configurar mais nada." />
+        <TextBlock FontSize="16" TextWrapping="Wrap" Opacity="0.8"
+                   Text="O sistema cuida sozinho do banco de dados e guarda uma cópia de segurança dos seus dados todos os dias." />
+      </StackPanel>
+
+      <!-- Nome do negócio -->
+      <StackPanel IsVisible="{Binding EhNome}" Spacing="8">
+        <TextBox Text="{Binding NomeDoNegocio}" FontSize="18" MaxLength="60" Watermark="Ex.: Lanchonete da Ana" />
+        <TextBlock Opacity="0.7" TextWrapping="Wrap" Text="Esse nome aparece nas notas em PDF. Você pode trocar depois em Ajustes." />
+      </StackPanel>
+
+      <!-- Exemplo -->
+      <StackPanel IsVisible="{Binding EhExemplo}" Spacing="12">
+        <TextBlock FontSize="16" TextWrapping="Wrap"
+                   Text="Para você ver o sistema funcionando, posso cadastrar 5 ingredientes (pão, carne, queijo, batata e refrigerante) e 4 produtos (dois lanches, batata frita e refrigerante), já com estoque e receitas." />
+        <CheckBox IsChecked="{Binding CriarExemplo}" FontSize="16"
+                  Content="Sim, criar o cardápio de exemplo" />
+        <TextBlock Opacity="0.7" TextWrapping="Wrap"
+                   Text="Depois você pode editar ou desativar o que quiser nas telas Estoque e Cardápio." />
+      </StackPanel>
+
+      <!-- Celular -->
+      <StackPanel IsVisible="{Binding EhCelular}" Spacing="8">
+        <TextBlock Opacity="0.8" TextWrapping="Wrap"
+                   Text="Esta etapa é opcional: você pode pular e conectar depois, na seção Celular." />
+        <views:CelularView DataContext="{Binding Celular}" />
+      </StackPanel>
+
+      <!-- Pronto -->
+      <StackPanel IsVisible="{Binding EhPronto}" Spacing="12">
+        <TextBlock FontSize="18" TextWrapping="Wrap" Text="O sistema está configurado." />
+        <TextBlock FontSize="16" TextWrapping="Wrap" Opacity="0.8"
+                   Text="Uma cópia de segurança dos seus dados é feita sozinha todos os dias. Elas ficam guardadas aqui:" />
+        <SelectableTextBlock Text="{Binding PastaDeBackups}" FontSize="13" Opacity="0.8" TextWrapping="Wrap" />
+        <TextBlock FontSize="16" TextWrapping="Wrap" Opacity="0.8"
+                   Text="Para mudar o nome do negócio ou fazer uma cópia na hora, use a seção Ajustes." />
+      </StackPanel>
+
+      <Border IsVisible="{Binding TemErro}" Background="#FEE2E2" CornerRadius="8" Padding="12">
+        <TextBlock Text="{Binding Erro}" Foreground="#991B1B" TextWrapping="Wrap" />
+      </Border>
+
+      <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,8,0,0">
+        <Button Content="Voltar" Command="{Binding VoltarCommand}" IsVisible="{Binding PodeVoltar}" />
+        <Button Grid.Column="2" Classes="accent" Content="{Binding TextoAvancar}" MinWidth="140"
+                HorizontalContentAlignment="Center"
+                Command="{Binding AvancarCommand}" IsEnabled="{Binding PodeAvancar}" />
+      </Grid>
+
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

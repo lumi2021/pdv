@@ -18,6 +18,15 @@
       <TextBlock Text="Preparando o sistema..." FontSize="20" HorizontalAlignment="Center" />
     </StackPanel>
 
+    <!-- Primeira abertura -->
+    <ContentControl IsVisible="{Binding PrimeiroUso}" Content="{Binding Assistente}">
+      <ContentControl.DataTemplates>
+        <DataTemplate DataType="vm:AssistenteViewModel">
+          <views:AssistenteView />
+        </DataTemplate>
+      </ContentControl.DataTemplates>
+    </ContentControl>
+
     <!-- Erro -->
     <StackPanel IsVisible="{Binding ComErro}"
                 HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16" MaxWidth="560">
@@ -57,6 +66,10 @@
       <ContentControl Grid.Column="1" Content="{Binding SecaoAtual}" Margin="32">
         <ContentControl.DataTemplates>
           <!-- Telas prontas: devem vir antes do modelo genérico de "em construção". -->
+          <DataTemplate DataType="vm:AjustesViewModel">
+            <views:AjustesView />
+          </DataTemplate>
+
           <DataTemplate DataType="vm:NotasViewModel">
             <views:NotasView />
           </DataTemplate>
@@ -88,6 +101,16 @@
       </ContentControl>
 
     </Grid>
+
+    <!-- Aviso de falha inesperada: não derruba o app, só avisa -->
+    <Border IsVisible="{Binding TemAviso}" VerticalAlignment="Top" HorizontalAlignment="Center"
+            Margin="0,16,0,0" MaxWidth="640" Background="#FEE2E2" CornerRadius="8" Padding="14,10"
+            BoxShadow="0 4 16 0 #40000000">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Text="{Binding Aviso}" Foreground="#991B1B" TextWrapping="Wrap" VerticalAlignment="Center" />
+        <Button Grid.Column="1" Content="OK" Command="{Binding FecharAvisoCommand}" Margin="12,0,0,0" />
+      </Grid>
+    </Border>
 
   </Grid>
 </Window>

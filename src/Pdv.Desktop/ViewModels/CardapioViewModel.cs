@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 
 namespace Pdv.Desktop.ViewModels;
@@ -228,9 +229,9 @@ public partial class CardapioViewModel : SecaoViewModel, IAtualizavel
         {
             Erro = ex.Message;
         }
-        catch (Exception)
+        catch (Exception ex)
         {
-            Erro = "Não foi possível concluir. Tente de novo.";
+            Erro = MensagemDeErro.Para(ex, "concluir esta ação");
         }
     }
 

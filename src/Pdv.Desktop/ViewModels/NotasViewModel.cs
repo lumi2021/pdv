@@ -3,6 +3,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Pdv.Core.Entities;
+using Pdv.Core.Infra;
 using Pdv.Core.Services;
 using Pdv.Desktop.Pdf;
 
@@ -48,12 +49,14 @@ public sealed class NotaAbertaViewModel(NotaDetalhe nota)
 public partial class NotasViewModel : SecaoViewModel, IAtualizavel
 {
     private readonly INotaService _notas;
+    private readonly IConfiguracaoService _configuracao;
     private int _versaoDaBusca;
 
-    public NotasViewModel(INotaService notas, PedidoEventos eventos)
+    public NotasViewModel(INotaService notas, PedidoEventos eventos, IConfiguracaoService configuracao)
         : base("Notas", "📄", "Notas internas dos pedidos")
     {
         _notas = notas;
+        _configuracao = configuracao;
         _periodoSelecionado = Periodos[0];
 
         // Pedido entregue = nota nova: a lista se atualiza sozinha.
@@ -129,7 +132,7 @@ public partial class NotasViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            Mensagem = $"Não foi possível ler as notas: {ex.Message}";
+            Mensagem = MensagemDeErro.Para(ex, "ler as notas");
         }
     }
 
@@ -149,7 +152,7 @@ public partial class NotasViewModel : SecaoViewModel, IAtualizavel
         }
         catch (Exception ex)
         {
-            Mensagem = $"Não foi possível abrir a nota: {ex.Message}";
+            Mensagem = MensagemDeErro.Para(ex, "abrir a nota");
         }
     }
 
@@ -159,14 +162,15 @@ public partial class NotasViewModel : SecaoViewModel, IAtualizavel
         if (Detalhe is null) return;
 
         var nota = Detalhe.Nota;
-        await Task.Run(() => NotaPdf.Gerar(nota, destino));
+        var nomeDoNegocio = _configuracao.Atual.NomeDoNegocio;
+        await Task.Run(() => NotaPdf.Gerar(nota, nomeDoNegocio, destino));
     }
 
     public void InformarPdfSalvo(string? caminho) =>
         Mensagem = caminho is null ? "PDF salvo." : $"PDF salvo em {caminho}";
 
     public void InformarFalhaNoPdf(Exception ex) =>
-        Mensagem = $"Não foi possível salvar o PDF: {ex.Message}";
+        Mensagem = MensagemDeErro.Para(ex, "salvar o PDF");
 
     [RelayCommand]
     private void FecharMensagem() => Mensagem = string.Empty;
