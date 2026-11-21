@@ -1,0 +1,108 @@
+name: Publicar para teste
+
+# Gera o app para Windows e Linux. Roda a cada push no main, ao criar uma tag v* (cria também um Release)
+# e manualmente em Actions > Publicar para teste > Run workflow.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Conferir se as migrations estão no repositório
+        run: |
+          if ! ls src/Pdv.Data/Migrations/*.cs >/dev/null 2>&1; then
+            echo "::error::Faltam as migrations em src/Pdv.Data/Migrations. Rode scripts/nova-migration e faça commit da pasta."
+            exit 1
+          fi
+
+      - name: Testes
+        run: dotnet test Pdv.slnx -c Release
+
+  publicar:
+    needs: testes
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: win-x64
+            sistema: windows-latest
+          - rid: linux-x64
+            sistema: ubuntu-latest
+    runs-on: ${{ matrix.sistema }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Versão
+        id: versao
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "numero=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "numero=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Um só arquivo, com o .NET dentro: quem testa não precisa instalar nada.
+      - name: Publicar
+        shell: bash
+        run: >
+          dotnet publish src/Pdv.Desktop/Pdv.Desktop.csproj
+          -c Release -r ${{ matrix.rid }} --self-contained
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:DebugType=None -p:DebugSymbols=false
+          -p:Version=${{ steps.versao.outputs.numero }}
+          -o publicado
+
+      - name: Compactar (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Compress-Archive -Path publicado/* -DestinationPath PdvLanchonete-${{ matrix.rid }}.zip
+
+      - name: Compactar (Linux)
+        if: runner.os == 'Linux'
+        run: tar -czf PdvLanchonete-${{ matrix.rid }}.tar.gz -C publicado .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PdvLanchonete-${{ matrix.rid }}
+          path: |
+            PdvLanchonete-${{ matrix.rid }}.zip
+            PdvLanchonete-${{ matrix.rid }}.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publicar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: pacotes
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: pacotes/*
+          generate_release_notes: true
+          prerelease: true
